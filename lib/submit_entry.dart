@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -188,7 +187,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
                         Padding(
                           padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
                           child: Divider(
-                            color: Colors.grey,
+                            color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
                           ),
                         ),
                         Padding(
@@ -197,7 +196,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
                             //leading: Icon(OMIcons.image),
                             title: Text("Upload Screenshots"),
                             trailing: IconButton(
-                              icon: Icon(OMIcons.addPhotoAlternate, color: Colors.black,),
+                              icon: Icon(OMIcons.addPhotoAlternate, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
                               onPressed: () {
                                 getImage();
                               },
