@@ -219,7 +219,7 @@ class _VoteOnChallengeSuggestionsState extends State<VoteOnChallengeSuggestions>
                             ),
                             Divider(
                               height: 0.0,
-                              color: Colors.black,
+                              color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
                             ),
                           ],
                         );
