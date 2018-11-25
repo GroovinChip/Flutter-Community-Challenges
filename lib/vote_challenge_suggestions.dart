@@ -166,12 +166,14 @@ class _VoteOnChallengeSuggestionsState extends State<VoteOnChallengeSuggestions>
                                             } else {
                                               final voteType = snapshot.data.exists ? snapshot.data['VoteType'] : "";
 
+                                              upvoteColor = Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white;
+                                              downvoteColor = Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white;
                                               if(voteType == "Upvote") {
                                                 upvoteColor = Colors.orange;
-                                                downvoteColor = Colors.black;
+                                                downvoteColor = Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white;
                                               } else if(voteType == "Downvote"){
                                                 downvoteColor = Colors.indigo;
-                                                upvoteColor = Colors.black;
+                                                upvoteColor = Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white;
                                               }
                                               return Column(
                                                 children: <Widget>[
