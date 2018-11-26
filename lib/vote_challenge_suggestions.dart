@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:localstorage/localstorage.dart';
 import 'package:outline_material_icons/outline_material_icons.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -12,6 +13,7 @@ class VoteOnChallengeSuggestions extends StatefulWidget {
 class _VoteOnChallengeSuggestionsState extends State<VoteOnChallengeSuggestions> {
   String votes;
   FirebaseUser currentUser;
+  final LocalStorage storage = LocalStorage("Repositories");
 
   @override
   void initState() {

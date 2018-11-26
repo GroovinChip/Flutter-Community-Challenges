@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +7,7 @@ import 'package:flutter_community_challenges/properties_file.dart';
 import 'package:groovin_material_icons/groovin_material_icons.dart';
 import 'package:simple_auth/simple_auth.dart' as simpleAuth;
 import 'package:http/http.dart' as http;
+import 'package:localstorage/localstorage.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -17,6 +17,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   FirebaseUser currentUser;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final LocalStorage storage = LocalStorage("Repositories");
 
   // attempt to log into github on login button press
   void login(simpleAuth.AuthenticatedApi api) async {
@@ -29,6 +30,9 @@ class _LoginScreenState extends State<LoginScreen> {
       var reposURL = responseJson['repos_url'];
       var firebaseUser = await FirebaseAuth.instance.signInWithGithub(token: token);
       //print(responseJson);
+      var repoResponse = await http.get(reposURL, headers: {HttpHeaders.authorizationHeader : "Bearer " + token});
+      var repoJson = json.decode(repoResponse.body);
+      storage.setItem("user_repositories", repoJson);
       UserUpdateInfo newInfo = UserUpdateInfo();
       newInfo.displayName = responseJson['login'];
       firebaseUser.updateProfile(newInfo);

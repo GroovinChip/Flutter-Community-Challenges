@@ -17,6 +17,7 @@ dependencies:
   package_info: ^0.3.2
   image_picker: ^0.4.10
   yaml: ^2.1.15
+  localstorage: ^1.0.0
   flutter_slidable: "^0.4.9"
 
 dev_dependencies:
