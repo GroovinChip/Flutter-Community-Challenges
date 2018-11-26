@@ -178,7 +178,7 @@ class _SuggestChallengeState extends State<SuggestChallenge> {
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton.extended(
         icon: Icon(Icons.cloud_upload),
         label: Text("Submit"),
@@ -237,6 +237,25 @@ class _SuggestChallengeState extends State<SuggestChallenge> {
             );
           }
         },
+      ),
+      bottomNavigationBar: BottomAppBar(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            IconButton(
+              icon: Icon(Icons.arrow_back),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            IconButton(
+              icon: Icon(OMIcons.info),
+              onPressed: () {
+
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

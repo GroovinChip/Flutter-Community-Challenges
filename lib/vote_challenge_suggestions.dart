@@ -234,13 +234,32 @@ class _VoteOnChallengeSuggestionsState extends State<VoteOnChallengeSuggestions>
           ],
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton.extended(
         icon: Icon(Icons.lightbulb_outline),
         label: Text("Suggest Challenge"),
         onPressed: () {
           Navigator.pushNamed(context, '/SuggestChallenge');
         },
+      ),
+      bottomNavigationBar: BottomAppBar(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            IconButton(
+              icon: Icon(Icons.arrow_back),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            IconButton(
+              icon: Icon(OMIcons.info),
+              onPressed: () {
+
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
