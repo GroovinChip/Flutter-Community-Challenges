@@ -29,7 +29,6 @@ class _LoginScreenState extends State<LoginScreen> {
       var responseJson = json.decode(response.body.toString());
       var reposURL = responseJson['repos_url'];
       var firebaseUser = await FirebaseAuth.instance.signInWithGithub(token: token);
-      //print(responseJson);
       var repoResponse = await http.get(reposURL, headers: {HttpHeaders.authorizationHeader : "Bearer " + token});
       var repoJson = json.decode(repoResponse.body);
       storage.setItem("user_repositories", repoJson);
