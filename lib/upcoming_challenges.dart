@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_community_challenges/upcoming_challenge_card.dart';
 import 'package:groovin_material_icons/groovin_material_icons.dart';
 import 'package:outline_material_icons/outline_material_icons.dart';
 
@@ -42,7 +44,60 @@ class _UpcomingChallengesState extends State<UpcomingChallenges> {
                 ],
               ),
             ),
-            // todo: get upcoming challenges from firebase
+            StreamBuilder<QuerySnapshot>(
+              stream: Firestore.instance.collection("UpcomingChallenges").snapshots(),
+              builder: (context, snapshot) {
+                if(!snapshot.hasData) {
+                  return Center(
+                    child: CircularProgressIndicator(),
+                  );
+                } else {
+                  return Expanded(
+                    child: ListView.builder(
+                      itemCount: snapshot.data.documents.length,
+                      itemBuilder: (builder, index) {
+                        DocumentSnapshot challenge = snapshot.data.documents[index];
+                        EdgeInsets columnPadding;
+                        IconData challengeTypeIcon;
+                        if("${challenge['ChallengeDescription']}" != ""){
+                          columnPadding = EdgeInsets.only(top: 10.0);
+                        } else {
+                          columnPadding = EdgeInsets.only(bottom: 10.0);
+                        }
+                        switch("${challenge['ChallengeCategory']}") {
+                          case "Productivity":
+                            challengeTypeIcon = OMIcons.checkCircleOutline;
+                            break;
+                          case "UI/UX":
+                            challengeTypeIcon = OMIcons.brush;
+                            break;
+                          case "State Management":
+                            challengeTypeIcon = OMIcons.cached;
+                            break;
+                          case "Codegolf":
+                            challengeTypeIcon = OMIcons.golfCourse;
+                            break;
+                          case "Other":
+                            challengeTypeIcon = OMIcons.moreHoriz;
+                            break;
+                          default:
+                            challengeTypeIcon = Icons.code;
+                            break;
+                        }
+                        return UpcomingChallengeCard(
+                          challengeName: "${challenge['ChallengeName']}",
+                          challengeDescription: "${challenge['ChallengeDescription']}",
+                          challengeCategory: "${challenge['ChallengeCategory']}",
+                          submittedBy: "${challenge['SubmittedBy']}",
+                          challengeTypeIcon: challengeTypeIcon,
+                          columnPadding: columnPadding,
+                        );
+                      },
+                    ),
+                  );
+                }
+              },
+            ),
           ],
         ),
       ),
