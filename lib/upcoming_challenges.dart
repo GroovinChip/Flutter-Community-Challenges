@@ -48,53 +48,63 @@ class _UpcomingChallengesState extends State<UpcomingChallenges> {
               stream: Firestore.instance.collection("UpcomingChallenges").snapshots(),
               builder: (context, snapshot) {
                 if(!snapshot.hasData) {
-                  return Center(
-                    child: CircularProgressIndicator(),
-                  );
-                } else {
                   return Expanded(
-                    child: ListView.builder(
-                      itemCount: snapshot.data.documents.length,
-                      itemBuilder: (builder, index) {
-                        DocumentSnapshot challenge = snapshot.data.documents[index];
-                        EdgeInsets columnPadding;
-                        IconData challengeTypeIcon;
-                        if("${challenge['ChallengeDescription']}" != ""){
-                          columnPadding = EdgeInsets.only(top: 10.0);
-                        } else {
-                          columnPadding = EdgeInsets.only(bottom: 10.0);
-                        }
-                        switch("${challenge['ChallengeCategory']}") {
-                          case "Productivity":
-                            challengeTypeIcon = OMIcons.checkCircleOutline;
-                            break;
-                          case "UI/UX":
-                            challengeTypeIcon = OMIcons.brush;
-                            break;
-                          case "State Management":
-                            challengeTypeIcon = OMIcons.cached;
-                            break;
-                          case "Codegolf":
-                            challengeTypeIcon = OMIcons.golfCourse;
-                            break;
-                          case "Other":
-                            challengeTypeIcon = OMIcons.moreHoriz;
-                            break;
-                          default:
-                            challengeTypeIcon = Icons.code;
-                            break;
-                        }
-                        return UpcomingChallengeCard(
-                          challengeName: "${challenge['ChallengeName']}",
-                          challengeDescription: "${challenge['ChallengeDescription']}",
-                          challengeCategory: "${challenge['ChallengeCategory']}",
-                          submittedBy: "${challenge['SubmittedBy']}",
-                          challengeTypeIcon: challengeTypeIcon,
-                          columnPadding: columnPadding,
-                        );
-                      },
+                    child: Center(
+                      child: CircularProgressIndicator(),
                     ),
                   );
+                } else {
+                  if(snapshot.data.documents.length > 0) {
+                    return Expanded(
+                      child: ListView.builder(
+                        itemCount: snapshot.data.documents.length,
+                        itemBuilder: (builder, index) {
+                          DocumentSnapshot challenge = snapshot.data.documents[index];
+                          EdgeInsets columnPadding;
+                          IconData challengeTypeIcon;
+                          if("${challenge['ChallengeDescription']}" != ""){
+                            columnPadding = EdgeInsets.only(top: 10.0);
+                          } else {
+                            columnPadding = EdgeInsets.only(bottom: 10.0);
+                          }
+                          switch("${challenge['ChallengeCategory']}") {
+                            case "Productivity":
+                              challengeTypeIcon = OMIcons.checkCircleOutline;
+                              break;
+                            case "UI/UX":
+                              challengeTypeIcon = OMIcons.brush;
+                              break;
+                            case "State Management":
+                              challengeTypeIcon = OMIcons.cached;
+                              break;
+                            case "Codegolf":
+                              challengeTypeIcon = OMIcons.golfCourse;
+                              break;
+                            case "Other":
+                              challengeTypeIcon = OMIcons.moreHoriz;
+                              break;
+                            default:
+                              challengeTypeIcon = Icons.code;
+                              break;
+                          }
+                          return UpcomingChallengeCard(
+                            challengeName: "${challenge['ChallengeName']}",
+                            challengeDescription: "${challenge['ChallengeDescription']}",
+                            challengeCategory: "${challenge['ChallengeCategory']}",
+                            submittedBy: "${challenge['SubmittedBy']}",
+                            challengeTypeIcon: challengeTypeIcon,
+                            columnPadding: columnPadding,
+                          );
+                        },
+                      ),
+                    );
+                  } else {
+                    return Expanded(
+                      child: Center(
+                        child: Text("No upcoming challenges"),
+                      ),
+                    );
+                  }
                 }
               },
             ),
