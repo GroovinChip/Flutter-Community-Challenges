@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:groovin_material_icons/groovin_material_icons.dart';
@@ -17,6 +18,7 @@ class CurrentChallenge extends StatefulWidget {
 
 class _CurrentChallengeState extends State<CurrentChallenge> {
   FirebaseUser currentUser;
+  Widget userSubtitle;
 
   PackageInfo _packageInfo = new PackageInfo(
     appName: 'Unknown',
@@ -41,6 +43,11 @@ class _CurrentChallengeState extends State<CurrentChallenge> {
 
   void getCurrentUser() async {
     currentUser = await FirebaseAuth.instance.currentUser();
+    if(currentUser.email.isEmpty)
+      userSubtitle = null;
+    else {
+      userSubtitle = Text(currentUser.email);
+    }
   }
 
   @override
@@ -124,7 +131,7 @@ class _CurrentChallengeState extends State<CurrentChallenge> {
                               ListTile(
                                 leading: Icon(OMIcons.accountCircle),
                                 title: Text(currentUser.displayName),
-                                subtitle: currentUser.email.isNotEmpty ? Text(currentUser.email) : null,
+                                subtitle: userSubtitle,
                                 trailing: FlatButton(
                                   child: Text("Log Out"),
                                   onPressed: () {
