@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +10,9 @@ import 'package:groovin_widgets/groovin_widgets.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:rounded_modal/rounded_modal.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class RepositoriesState {
   final bool isLoading;
@@ -35,6 +38,7 @@ class SubmitEntryToChallenge extends StatefulWidget {
 }
 
 class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
+  PermissionStatus status;
   String _githubRepo;
   TextEditingController _appNameController = TextEditingController();
   TextEditingController _submissionDescriptionController = TextEditingController();
@@ -52,11 +56,17 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     });
   }
 
+  // Check current permissions. If storage permission not granted, prompt for it.
+  void checkPermissions() async {
+    Map<PermissionGroup, PermissionStatus> permissions =
+      await PermissionHandler.requestPermissions([PermissionGroup.storage]);
+    PermissionStatus storagePermission =
+      await PermissionHandler.checkPermissionStatus(PermissionGroup.storage);
+  }
 
   @override
   void initState() {
     super.initState();
-
     this._load();
   }
 
@@ -97,186 +107,214 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
                 } else {
                   final snap = snapshot.data;
                     return SingleChildScrollView(
-                      child: Column(
-                        children: <Widget>[
-                          Padding(
-                            padding: const EdgeInsets.only(top: 16.0, bottom: 12.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: <Widget>[
-                                Text(
-                                  "Submit Challenge Entry",
-                                  style: TextStyle(
-                                    fontSize: 20.0,
-                                    fontWeight: FontWeight.bold,
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height / 1,
+                        child: Column(
+                          children: <Widget>[
+                            Padding(
+                              padding: const EdgeInsets.only(top: 16.0, bottom: 12.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: <Widget>[
+                                  Text(
+                                    "Submit Challenge Entry",
+                                    style: TextStyle(
+                                      fontSize: 20.0,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 16.0, top: 16.0),
-                            child: StreamBuilder(
-                              stream: _repositoriesSubject.stream,
-                              initialData: _repositoriesSubject.value,
-                              builder: (context, snapshot) {
-                                final status = snapshot.data;
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16.0, top: 16.0),
+                              child: StreamBuilder(
+                                stream: _repositoriesSubject.stream,
+                                initialData: _repositoriesSubject.value,
+                                builder: (context, snapshot) {
+                                  final status = snapshot.data;
 
-                                if (snapshot.hasData && !status.isLoading) {
-                                  final _githubRepos = status.repos.map<DropdownMenuItem>((repo) {
-                                    return DropdownMenuItem(
-                                      child: Text(repo['name']),
-                                      value: repo['name'],
-                                    );
-                                  }).toList();
+                                  if (snapshot.hasData && !status.isLoading) {
+                                    final _githubRepos = status.repos.map<DropdownMenuItem>((repo) {
+                                      return DropdownMenuItem(
+                                        child: Text(repo['name']),
+                                        value: repo['name'],
+                                      );
+                                    }).toList();
 
-                                  return Row(
-                                    children: <Widget>[
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(left: 16.0),
-                                          child: OutlineDropdownButton(
-                                            items: _githubRepos,
-                                            value: _githubRepo,
-                                            onChanged: (value) {
-                                              setState(() {
-                                                _appNameController.text = value;
-                                                _githubRepo = value;
-                                              });
+                                    return Row(
+                                      children: <Widget>[
+                                        Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(left: 16.0),
+                                            child: OutlineDropdownButton(
+                                              items: _githubRepos,
+                                              value: _githubRepo,
+                                              onChanged: (value) {
+                                                setState(() {
+                                                  _appNameController.text = value;
+                                                  _githubRepo = value;
+                                                });
+                                              },
+                                              hint: Row(
+                                                children: <Widget>[
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(left: 4.0),
+                                                    child: Icon(
+                                                        GroovinMaterialIcons.github_circle),
+                                                  ),
+                                                  Padding(
+                                                    padding: const EdgeInsets.only(left: 10.0),
+                                                    child: Text("Choose Repo"),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          flex: 7,
+                                        ),
+                                        Expanded(
+                                          child: IconButton(
+                                            icon: Icon(Icons.refresh),
+                                            onPressed: (){
+                                              refreshRepositories(snap);
                                             },
-                                            hint: Row(
+                                          ),
+                                          flex: 1,
+                                        ),
+                                      ],
+                                    );
+                                  } else {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                                      child: OutlineDropdownButton(
+                                        items: [
+                                          DropdownMenuItem(
+                                            value: "",
+                                            child: Row(
                                               children: <Widget>[
                                                 Padding(
                                                   padding: const EdgeInsets.only(left: 4.0),
-                                                  child: Icon(
-                                                      GroovinMaterialIcons.github_circle),
+                                                  child: Icon(GroovinMaterialIcons.github_circle),
                                                 ),
                                                 Padding(
                                                   padding: const EdgeInsets.only(left: 10.0),
-                                                  child: Text("Choose Repo"),
+                                                  child: Text("Loading repositories..."),
+                                                ),
+                                                Padding(
+                                                  padding: const EdgeInsets.only(left: 10.0),
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2.0,
+                                                  ),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                        ),
-                                        flex: 7,
-                                      ),
-                                      Expanded(
-                                        child: IconButton(
-                                          icon: Icon(Icons.refresh),
-                                          onPressed: (){
-                                            refreshRepositories(snap);
-                                          },
-                                        ),
-                                        flex: 1,
-                                      ),
-                                    ],
-                                  );
-                                } else {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                    child: OutlineDropdownButton(
-                                      items: [
-                                        DropdownMenuItem(
-                                          value: "",
-                                          child: Row(
-                                            children: <Widget>[
-                                              Padding(
-                                                padding: const EdgeInsets.only(left: 4.0),
-                                                child: Icon(GroovinMaterialIcons.github_circle),
-                                              ),
-                                              Padding(
-                                                padding: const EdgeInsets.only(left: 10.0),
-                                                child: Text("Loading repositories..."),
-                                              ),
-                                              Padding(
-                                                padding: const EdgeInsets.only(left: 10.0),
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2.0,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                      value: "",
-                                      onChanged: (value) {},
-                                      hint: Row(
-                                        children: <Widget>[
-                                          Padding(
-                                            padding: const EdgeInsets.only(left: 4.0),
-                                            child: Icon(
-                                                GroovinMaterialIcons.github_circle),
-                                          ),
-                                          Padding(
-                                            padding: const EdgeInsets.only(left: 10.0),
-                                            child: Text("Choose Repo"),
-                                          ),
                                         ],
+                                        value: "",
+                                        onChanged: (value) {},
+                                        hint: Row(
+                                          children: <Widget>[
+                                            Padding(
+                                              padding: const EdgeInsets.only(left: 4.0),
+                                              child: Icon(
+                                                  GroovinMaterialIcons.github_circle),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.only(left: 10.0),
+                                              child: Text("Choose Repo"),
+                                            ),
+                                          ],
+                                        ),
                                       ),
+                                    );
+                                  }
+                                }
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: TextField(
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  labelText: "App Name",
+                                  prefixIcon: Icon(OMIcons.shortText)
+                                ),
+                                controller: _appNameController,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: TextField(
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  labelText: "Submission Description",
+                                  prefixIcon: Icon(OMIcons.textsms)
+                                ),
+                                maxLines: 2,
+                                controller: _submissionDescriptionController,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
+                              child: Divider(
+                                color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
+                              child: ListTile(
+                                //leading: Icon(OMIcons.image),
+                                title: Text("Upload Screenshots"),
+                                trailing: IconButton(
+                                  icon: Icon(OMIcons.addPhotoAlternate, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
+                                  onPressed: () {
+                                    //checkPermissions();
+                                    getImage();
+                                  },
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: GridView.builder(
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
+                                itemCount: _screenshots.length,
+                                itemBuilder: (context, index) {
+                                  return GridTile(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        showRoundedModalBottomSheet(
+                                          context: context,
+                                          dismissOnTap: false,
+                                          builder: (context) {
+                                            return Container(
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: <Widget>[
+                                                  ListTile(
+                                                    leading: Icon(OMIcons.delete),
+                                                    title: Text("Remove screenshot"),
+                                                    onTap: () {
+                                                      setState(() {
+                                                        _screenshots.removeAt(index);
+                                                      });
+                                                      Navigator.pop(context);
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }
+                                        );
+                                      },
+                                      child: Image.file(_screenshots[index]),
                                     ),
                                   );
-                                }
-                              }
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: TextField(
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: "App Name",
-                                prefixIcon: Icon(OMIcons.shortText)
-                              ),
-                              controller: _appNameController,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: TextField(
-                              decoration: InputDecoration(
-                                border: OutlineInputBorder(),
-                                labelText: "Submission Description",
-                                prefixIcon: Icon(OMIcons.textsms)
-                              ),
-                              maxLines: 2,
-                              controller: _submissionDescriptionController,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
-                            child: Divider(
-                              color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
-                            child: ListTile(
-                              //leading: Icon(OMIcons.image),
-                              title: Text("Upload Screenshots"),
-                              trailing: IconButton(
-                                icon: Icon(OMIcons.addPhotoAlternate, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
-                                onPressed: () {
-                                  getImage();
                                 },
                               ),
                             ),
-                          ),
-                          /*Padding(
-                            padding: const EdgeInsets.only(left: 16.0, right: 16.0),
-                            child: Container(
-                              height: 50.0,
-                              child: ListView.builder(
-                                itemCount: _screenshots.length,
-                                itemBuilder: (builder, index) {
-                                  return ListTile(
-                                    leading: Image.file(_screenshots[index]),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),*/
-                        ],
+                          ],
+                        ),
                       ),
                     );
                 }
