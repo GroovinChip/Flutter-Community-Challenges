@@ -7,6 +7,12 @@ class CurrentChallengeCard extends StatefulWidget {
 }
 
 class _CurrentChallengeCardState extends State<CurrentChallengeCard> {
+  String formatDuration(Duration duration) {
+    final hours = duration.inHours % 24;
+    final minutes = duration.inMinutes % 60;
+    return "${duration.inDays}d, $hours:$minutes";
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLightTheme = Theme.of(context).brightness == Brightness.light;
@@ -30,64 +36,74 @@ class _CurrentChallengeCardState extends State<CurrentChallengeCard> {
                   child: Text("ERROR"),
                 );
               }
+
               if (!snapshot.hasData) {
                 return Center(
                   child: CircularProgressIndicator(),
                 );
-              } else {
-                if (snapshot.data.documents.length > 0) {
-                  DocumentSnapshot currentChallenge = snapshot.data.documents[0];
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      children: <Widget>[
-                        Text(
-                          "${currentChallenge['ChallengeName']}",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24.0,
-                            color: textColor,
-                          ),
-                        ),
-                        "${currentChallenge['ChallengeName']}" != null
-                          ? Text(
-                              "${currentChallenge['ChallengeName']}",
-                              style: TextStyle(
-                                fontStyle: FontStyle.italic,
-                                fontSize: 20.0,
-                                color: textColor,
-                              ),
-                            )
-                          : Container(),
-                        Text(
-                          "Time Remaining: 00d, 00:00",
-                          style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            fontSize: 16.0,
-                            color: textColor,
-                          ),
-                        ),
-                        Text(
-                          "Submissions so far: X",
-                          style: TextStyle(
-                            color: textColor,
-                          ),
-                        ),
-                      ],
+              }
+
+              if (snapshot.data.documents.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      "No challenge found",
+                      style: TextStyle(color: Colors.red),
                     ),
-                  );
-                } else {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        "No challenge found",
-                        style: TextStyle(color: Colors.red),
+                  ),
+                );
+              }
+
+              final currentChallenge = snapshot.data.documents[0];
+              final String challengeName = currentChallenge['ChallengeName'] ?? "";
+              
+              final DateTime submissionEndTime = currentChallenge['ChallengeEndTime'];
+              final timeLeft = submissionEndTime.difference(DateTime.now().toUtc());
+              final String timeRemaining = "Time Remaining: ${formatDuration(timeLeft)}";
+              
+              final int submissionCount = currentChallenge['ChallengeSubmissionsCount'] ?? 0;
+              final String submissionsSoFar = "Submissions so far: $submissionCount";
+              
+              return Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: <Widget>[
+                    Text(
+                      challengeName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24.0,
+                        color: textColor,
                       ),
                     ),
-                  );
-                }
-              }
+                    challengeName.isNotEmpty
+                      ? Text(
+                          challengeName,
+                          style: TextStyle(
+                            fontStyle: FontStyle.italic,
+                            fontSize: 20.0,
+                            color: textColor,
+                          ),
+                        )
+                      : Container(),
+                    Text(
+                      timeRemaining,
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        fontSize: 16.0,
+                        color: textColor,
+                      ),
+                    ),
+                    Text(
+                      submissionsSoFar,
+                      style: TextStyle(
+                        color: textColor,
+                      ),
+                    ),
+                  ],
+                ),
+              );
             },
           ),
         ),
