@@ -86,6 +86,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
   TextEditingController _appNameController = TextEditingController();
   TextEditingController _submissionDescriptionController = TextEditingController();
   List<File> _screenshots = [];
+  List<File> _selectedScreenshots = [];
 
   File _image;
 
@@ -219,6 +220,13 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     );
   }
 
+  deleteSelectedImages() {
+    setState(() {
+      _selectedScreenshots.forEach((s) => _screenshots.remove(s));
+      _selectedScreenshots = [];
+    });
+  }
+
   void _showImageRemoveModal(int screenshotIndex) {
     showRoundedModalBottomSheet(
       context: context,
@@ -325,10 +333,40 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
       physics: NeverScrollableScrollPhysics(),
       itemCount: _screenshots.length,
       itemBuilder: (context, index) {
+        final image = _screenshots[index];
+
+        final child = _selectedScreenshots.contains(image)
+        ? Image.file(_screenshots[index], color: Colors.black45, colorBlendMode: BlendMode.darken, fit: BoxFit.cover)
+        : Image.file(_screenshots[index], fit: BoxFit.cover);
+
         return GridTile(
           child: GestureDetector(
-            onTap: () => _showImageRemoveModal(index),
-            child: Image.file(_screenshots[index]),
+            onLongPress: () {
+              setState(() { 
+                  if (_selectedScreenshots.contains(image)) {
+                    _selectedScreenshots.remove(image);
+                  } else {
+                    _selectedScreenshots.add(image);
+                  }
+              });
+            },
+            onTap: () {
+              setState(() {
+                if (_selectedScreenshots.isEmpty) {
+                  _showImageRemoveModal(index);
+                } else {
+                  if (_selectedScreenshots.contains(image)) {
+                    _selectedScreenshots.remove(image);
+                  } else {
+                    _selectedScreenshots.add(image);
+                  }
+                }
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: child,
+            )
           ),
         );
       },
@@ -408,12 +446,17 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
                         padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
                         child: ListTile(
                           //leading: Icon(OMIcons.image),
-                          title: Text("Upload Screenshots"),
-                          trailing: IconButton(
+                          title: _selectedScreenshots.isNotEmpty
+                            ? Text("Selecting Images (${_selectedScreenshots.length} of ${_screenshots.length})")
+                            : Text("Upload Screenshots"),
+                          trailing: _selectedScreenshots.isNotEmpty
+                          ? IconButton(
+                            icon: Icon(Icons.delete, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
+                            onPressed: () => deleteSelectedImages(),
+                          )
+                          : IconButton(
                             icon: Icon(OMIcons.addPhotoAlternate, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
-                            onPressed: _screenshots.length > 5
-                            ? null
-                            : () => getImage(),
+                            onPressed: _screenshots.length > 5 ? null : () => getImage(),
                           ),
                         ),
                       ),
