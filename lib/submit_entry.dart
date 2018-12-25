@@ -91,6 +91,10 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
 
   Future getImage() async {
     var image = await ImagePicker.pickImage(source: ImageSource.gallery);
+    if (image == null) {
+      return;
+    }
+
     setState(() {
       _image = image;
       _screenshots.add(_image);
@@ -140,9 +144,13 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     final snackBarController = _scaffoldKey.currentState.showSnackBar(
       SnackBar(
         content: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const CircularProgressIndicator(),
-            const Text('Submitting...'),
+            const Text("Submitting..."),
+            const Padding(
+              padding: EdgeInsets.only(left: 8.0),
+              child: CircularProgressIndicator(),
+            ),
           ],
         ),
       )
@@ -273,10 +281,14 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(left: 16.0),
-                child: OutlineDropdownButton(
+                child: OutlineDropdownButtonFormField<GithubRepository>(
                   items: _githubRepos,
                   value: _githubRepo,
                   onChanged: (value) => onRepositorySelect(value),
+                  validator: (repo) {
+                    print(repo);
+                    return repo == null ? 'This field is required' : null;
+                  },
                   hint: Row(
                     children: <Widget>[
                       Padding(
@@ -355,12 +367,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
                     children: <Widget>[
                       Padding(
                         padding: const EdgeInsets.only(top: 16.0, bottom: 12.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            title,
-                          ],
-                        ),
+                        child: title,
                       ),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 16.0, top: 16.0),
@@ -404,10 +411,9 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
                           title: Text("Upload Screenshots"),
                           trailing: IconButton(
                             icon: Icon(OMIcons.addPhotoAlternate, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
-                            onPressed: () {
-                              //checkPermissions();
-                              getImage();
-                            },
+                            onPressed: _screenshots.length > 5
+                            ? null
+                            : () => getImage(),
                           ),
                         ),
                       ),
