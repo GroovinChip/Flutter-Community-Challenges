@@ -37,14 +37,55 @@ class SubmitEntryToChallenge extends StatefulWidget {
   _SubmitEntryToChallengeState createState() => _SubmitEntryToChallengeState();
 }
 
+typedef CurrentUserBuilderFunction = Function(BuildContext, FirebaseUser);
+
+class GithubRepository {
+  final String name;
+  final String url;
+
+  GithubRepository(dynamic repoData):
+    name = repoData['name'],
+    url = '${repoData['html_url']}/${repoData['name']}';
+
+  @override
+  int get hashCode => name.hashCode ^ url.hashCode;
+
+  @override
+  bool operator ==(o) => o is GithubRepository
+    && o.name == name
+    && o.url == url;
+}
+
+class CurrentUserBuilder extends StatelessWidget {
+  final CurrentUserBuilderFunction builder;
+
+  const CurrentUserBuilder({Key key, @required this.builder}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<FirebaseUser>(
+      future: FirebaseAuth.instance.currentUser(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return CircularProgressIndicator();
+        }
+
+        return builder(context, snapshot.data);
+      }
+    );
+  }
+}
+
 class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
+  final storage = LocalStorage("Repositories");
+  final _repositoriesSubject = BehaviorSubject<RepositoriesState>(seedValue: RepositoriesState.loading());
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   PermissionStatus status;
-  String _githubRepo;
+  GithubRepository _githubRepo;
   TextEditingController _appNameController = TextEditingController();
   TextEditingController _submissionDescriptionController = TextEditingController();
   List<File> _screenshots = [];
-  final storage = LocalStorage("Repositories");
-  final _repositoriesSubject = BehaviorSubject<RepositoriesState>(seedValue: RepositoriesState.loading());
 
   File _image;
 
@@ -86,282 +127,327 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
 
   final formKey = GlobalKey<FormState>();
 
-  void submitEntry() {
-    if(formKey.currentState.validate()) {
-      // submit entry
+  void submitEntry(FirebaseUser currentUser) async {
+    if(!formKey.currentState.validate()) {
+      return;
     }
+
+    final docs = await Firestore.instance.collection("CurrentChallenge").getDocuments();
+    if (docs.documents.isEmpty) {
+      return;
+    }
+
+    final snackBarController = _scaffoldKey.currentState.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: <Widget>[
+            const CircularProgressIndicator(),
+            const Text('Submitting...'),
+          ],
+        ),
+      )
+    );
+
+    final imageBase64 = _screenshots.map((f) {
+      return base64Encode(f.readAsBytesSync());
+    }).toList();
+
+    final challenge = docs.documents.first;
+
+    await Firestore.instance.collection("ChallengeEntries").document(currentUser.uid).setData({
+      "Challenge": challenge.documentID,
+      "Repo": _githubRepo.url,
+      "Description": _submissionDescriptionController.text,
+      "Images": imageBase64,
+    });
+
+    snackBarController.close();
+    Navigator.of(context).pop();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: FutureBuilder(
-          future: FirebaseAuth.instance.currentUser(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return CircularProgressIndicator();
-            }
-            
-            final currentUser = snapshot.data;
-            return StreamBuilder<DocumentSnapshot>(
-              stream: Firestore.instance.collection("Users").document(currentUser.uid).snapshots(),
-              builder: (context, snapshot) {
-                if(!snapshot.hasData) {
-                  return Center(
-                    child: CircularProgressIndicator(),
-                  );
-                } else {
-                  final snap = snapshot.data;
-                    return SingleChildScrollView(
-                      child: SizedBox(
-                        height: MediaQuery.of(context).size.height / 1,
-                        child: Form(
-                          key: formKey,
-                          child: Column(
-                            children: <Widget>[
-                              Padding(
-                                padding: const EdgeInsets.only(top: 16.0, bottom: 12.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: <Widget>[
-                                    Text(
-                                      "Submit Challenge Entry",
-                                      style: TextStyle(
-                                        fontSize: 20.0,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 16.0, top: 16.0),
-                                child: StreamBuilder(
-                                  stream: _repositoriesSubject.stream,
-                                  initialData: _repositoriesSubject.value,
-                                  builder: (context, snapshot) {
-                                    final status = snapshot.data;
-
-                                    if (snapshot.hasData && !status.isLoading) {
-                                      final _githubRepos = status.repos.map<DropdownMenuItem>((repo) {
-                                        return DropdownMenuItem(
-                                          child: Text(repo['name']),
-                                          value: repo['name'],
-                                        );
-                                      }).toList();
-
-                                      return Row(
-                                        children: <Widget>[
-                                          Expanded(
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(left: 16.0),
-                                              child: OutlineDropdownButton(
-                                                items: _githubRepos,
-                                                value: _githubRepo,
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    _appNameController.text = value;
-                                                    _githubRepo = value;
-                                                  });
-                                                },
-                                                hint: Row(
-                                                  children: <Widget>[
-                                                    Padding(
-                                                      padding: const EdgeInsets.only(left: 4.0),
-                                                      child: Icon(
-                                                          GroovinMaterialIcons.github_circle),
-                                                    ),
-                                                    Padding(
-                                                      padding: const EdgeInsets.only(left: 10.0),
-                                                      child: Text("Choose Repo"),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            flex: 7,
-                                          ),
-                                          Expanded(
-                                            child: IconButton(
-                                              icon: Icon(Icons.refresh),
-                                              onPressed: (){
-                                                refreshRepositories(snap);
-                                              },
-                                            ),
-                                            flex: 1,
-                                          ),
-                                        ],
-                                      );
-                                    } else {
-                                      return Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                        child: OutlineDropdownButton(
-                                          items: [
-                                            DropdownMenuItem(
-                                              value: "",
-                                              child: Row(
-                                                children: <Widget>[
-                                                  Padding(
-                                                    padding: const EdgeInsets.only(left: 4.0),
-                                                    child: Icon(GroovinMaterialIcons.github_circle),
-                                                  ),
-                                                  Padding(
-                                                    padding: const EdgeInsets.only(left: 10.0),
-                                                    child: Text("Loading repositories..."),
-                                                  ),
-                                                  Padding(
-                                                    padding: const EdgeInsets.only(left: 10.0),
-                                                    child: CircularProgressIndicator(
-                                                      strokeWidth: 2.0,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                          value: "",
-                                          onChanged: (value) {},
-                                          hint: Row(
-                                            children: <Widget>[
-                                              Padding(
-                                                padding: const EdgeInsets.only(left: 4.0),
-                                                child: Icon(
-                                                    GroovinMaterialIcons.github_circle),
-                                              ),
-                                              Padding(
-                                                padding: const EdgeInsets.only(left: 10.0),
-                                                child: Text("Choose Repo"),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: TextFormField(
-                                  validator: (input) => input == null || input == "" ? 'This field is required' : null,
-                                  onSaved: (input) => _appNameController.text = input,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    labelText: "App Name",
-                                    prefixIcon: Icon(OMIcons.shortText)
-                                  ),
-                                  controller: _appNameController,
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: TextField(
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    labelText: "Submission Description",
-                                    prefixIcon: Icon(OMIcons.textsms)
-                                  ),
-                                  maxLines: 2,
-                                  controller: _submissionDescriptionController,
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
-                                child: Divider(
-                                  color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
-                                child: ListTile(
-                                  //leading: Icon(OMIcons.image),
-                                  title: Text("Upload Screenshots"),
-                                  trailing: IconButton(
-                                    icon: Icon(OMIcons.addPhotoAlternate, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
-                                    onPressed: () {
-                                      //checkPermissions();
-                                      getImage();
-                                    },
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: GridView.builder(
-                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
-                                  itemCount: _screenshots.length,
-                                  itemBuilder: (context, index) {
-                                    return GridTile(
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          showRoundedModalBottomSheet(
-                                            context: context,
-                                            dismissOnTap: false,
-                                            builder: (context) {
-                                              return Container(
-                                                child: Column(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: <Widget>[
-                                                    ListTile(
-                                                      leading: Icon(OMIcons.delete),
-                                                      title: Text("Remove screenshot"),
-                                                      onTap: () {
-                                                        setState(() {
-                                                          _screenshots.removeAt(index);
-                                                        });
-                                                        Navigator.pop(context);
-                                                      },
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            }
-                                          );
-                                        },
-                                        child: Image.file(_screenshots[index]),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                }
-              },
-            );
-          },
-        )
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton.extended(
-        icon: Icon(Icons.cloud_upload),
-        label: Text("Submit"),
-        onPressed: () {
-          submitEntry();
-        },
-      ),
-      bottomNavigationBar: BottomAppBar(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            IconButton(
-              icon: Icon(Icons.arrow_back),
-              onPressed: () {
-                Navigator.pop(context);
-              },
+  Widget _buildLoadingDropdown() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: OutlineDropdownButton(
+        items: [
+          DropdownMenuItem(
+            value: "",
+            child: Row(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.only(left: 4.0),
+                  child: Icon(GroovinMaterialIcons.github_circle),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 10.0),
+                  child: Text("Loading repositories..."),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 10.0),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.0,
+                  ),
+                ),
+              ],
             ),
-            IconButton(
-              icon: Icon(OMIcons.info),
-              onPressed: () {
-
-              },
+          ),
+        ],
+        value: "",
+        onChanged: (value) {},
+        hint: Row(
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.only(left: 4.0),
+              child: Icon(
+                  GroovinMaterialIcons.github_circle),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 10.0),
+              child: Text("Choose Repo"),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showImageRemoveModal(int screenshotIndex) {
+    showRoundedModalBottomSheet(
+      context: context,
+      dismissOnTap: false,
+      builder: (context) {
+        return Container(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                leading: Icon(OMIcons.delete),
+                title: Text("Remove screenshot"),
+                onTap: () {
+                  setState(() {
+                    _screenshots.removeAt(screenshotIndex);
+                  });
+
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      }
+    );
+  }
+
+  void onRepositorySelect(GithubRepository repository) {
+    final usingRepositoryName = _githubRepo?.name == _appNameController.text;
+
+    setState(() {
+      _githubRepo = repository;
+
+      if (usingRepositoryName || _appNameController.text.isEmpty) {
+        _appNameController.text = repository.name;
+      }
+    });
+  }
+
+  Widget _buildReposDropdown(DocumentSnapshot userDocument) {
+    return StreamBuilder(
+      stream: _repositoriesSubject.stream,
+      initialData: _repositoriesSubject.value,
+      builder: (context, AsyncSnapshot<RepositoriesState> snapshot) {
+        final status = snapshot.data;
+
+        if (!snapshot.hasData || status.isLoading) {
+          return _buildLoadingDropdown();
+        }
+
+        final _githubRepos = status.repos.map<DropdownMenuItem<GithubRepository>>((repo) {
+          return DropdownMenuItem<GithubRepository>(
+            child: Text(repo['name']),
+            value: GithubRepository(repo),
+          );
+        }).toList();
+
+        return Row(
+          children: <Widget>[
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16.0),
+                child: OutlineDropdownButton(
+                  items: _githubRepos,
+                  value: _githubRepo,
+                  onChanged: (value) => onRepositorySelect(value),
+                  hint: Row(
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4.0),
+                        child: Icon(
+                            GroovinMaterialIcons.github_circle),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 10.0),
+                        child: Text("Choose Repo"),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              flex: 7,
+            ),
+            Expanded(
+              child: IconButton(
+                icon: Icon(Icons.refresh),
+                onPressed: () => refreshRepositories(userDocument),
+              ),
+              flex: 1,
+            ),
+          ],
+        );
+      }
+    );
+  }
+
+  Widget _buildImageGrid() {
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
+      physics: NeverScrollableScrollPhysics(),
+      itemCount: _screenshots.length,
+      itemBuilder: (context, index) {
+        return GridTile(
+          child: GestureDetector(
+            onTap: () => _showImageRemoveModal(index),
+            child: Image.file(_screenshots[index]),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CurrentUserBuilder(
+      builder: (context, currentUser) {
+        final body = StreamBuilder<DocumentSnapshot>(
+          stream: Firestore.instance.collection("Users").document(currentUser.uid).snapshots(),
+          builder: (context, snapshot) {
+            if(!snapshot.hasData) {
+              return Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+
+            final title = Text(
+              "Submit Challenge Entry",
+              style: TextStyle(
+                fontSize: 20.0,
+                fontWeight: FontWeight.bold,
+              ),
+            );
+
+            final snap = snapshot.data;
+
+            return SingleChildScrollView(
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height / 1,
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16.0, bottom: 12.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            title,
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0, top: 16.0),
+                        child: _buildReposDropdown(snap),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: TextFormField(
+                          validator: (input) => input.isEmpty ? 'This field is required' : null,
+                          onSaved: (input) => _appNameController.text = input,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: "App Name",
+                            prefixIcon: Icon(OMIcons.shortText)
+                          ),
+                          controller: _appNameController,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: TextField(
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(),
+                            labelText: "Submission Description",
+                            prefixIcon: Icon(OMIcons.textsms)
+                          ),
+                          maxLines: 2,
+                          controller: _submissionDescriptionController,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
+                        child: Divider(
+                          color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
+                        child: ListTile(
+                          //leading: Icon(OMIcons.image),
+                          title: Text("Upload Screenshots"),
+                          trailing: IconButton(
+                            icon: Icon(OMIcons.addPhotoAlternate, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
+                            onPressed: () {
+                              //checkPermissions();
+                              getImage();
+                            },
+                          ),
+                        ),
+                      ),
+                      Expanded(child: _buildImageGrid()),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+
+        return Scaffold(
+          key: _scaffoldKey,
+          body: SafeArea(child: body),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+          floatingActionButton: FloatingActionButton.extended(
+            icon: Icon(Icons.cloud_upload),
+            label: Text("Submit"),
+            onPressed: () => submitEntry(currentUser),
+          ),
+          bottomNavigationBar: BottomAppBar(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.pop(context)
+                ),
+                IconButton(
+                  icon: Icon(OMIcons.info),
+                  onPressed: () {
+
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
