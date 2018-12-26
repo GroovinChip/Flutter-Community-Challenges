@@ -9,10 +9,9 @@ import 'package:groovin_widgets/groovin_widgets.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:rounded_modal/rounded_modal.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 
 class RepositoriesState {
   final bool isLoading;
@@ -300,16 +299,83 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     );
   }
 
+  void _showImageGallery(File selectedImage) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (ctx) {
+        final pages = _screenshots.map((f) => PhotoViewGalleryPageOptions(
+          imageProvider: FileImage(f),
+          heroTag: f.path
+        )).toList();
+
+        return Scaffold(
+          body: Container(
+            constraints: BoxConstraints.expand(
+              height: MediaQuery.of(context).size.height,
+            ),
+            child: Stack(
+              alignment: Alignment.bottomRight,
+              children: <Widget>[
+                PhotoViewGallery(
+                  pageOptions: pages,
+                  pageController: PageController(initialPage: _screenshots.indexOf(selectedImage)),
+                ),
+                Container(
+                  color: Colors.black45,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        color: Colors.white,
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        color: Colors.white,
+                        onPressed: () async {
+                          final res = await showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text("Remove Screenshot?"),
+                                content: const Text("Are you sure you want to remove the screenshot?"),
+                                actions: <Widget>[
+                                  new FlatButton(
+                                    child: const Text("No"),
+                                    onPressed: () => Navigator.of(context).pop(false)
+                                  ),
+                                  new FlatButton(
+                                    child: const Text("Yes"),
+                                    onPressed: () => Navigator.of(context).pop(true)
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+
+                          if (res) {
+                            _screenshots.remove(selectedImage);
+                            _selectedScreenshots.remove(selectedImage);
+                            Navigator.of(context).pop();
+                          }
+                        },
+                      )
+                    ],
+                  )
+                )
+              ],
+            )
+          ),
+        );
+      },
+      fullscreenDialog: true,
+    ));
+  }
+
   void _onImageSelected(File image) {
     if (_selectedScreenshots.isEmpty) {
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (ctx) {
-          return PhotoView(
-            imageProvider: FileImage(image)
-          );
-        },
-        fullscreenDialog: true,
-      ));
+      _showImageGallery(image);
     } else {
       if (_selectedScreenshots.contains(image)) {
         _selectedScreenshots.remove(image);
@@ -342,14 +408,13 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
                   }
               });
             },
-            onTap: () {
-              setState(() {
-                _onImageSelected(image);
-              });
-            },
+            onTap: () => setState(() { _onImageSelected(image); }),
             child: Padding(
               padding: const EdgeInsets.all(4),
-              child: child,
+              child: Hero(
+                child: child,
+                tag: image.path,
+              ),
             )
           ),
         );
@@ -357,128 +422,138 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     );
   }
 
+  Widget _buildBody(BuildContext context, FirebaseUser currentUser) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: Firestore.instance.collection("Users").document(currentUser.uid).snapshots(),
+      builder: (context, snapshot) {
+        if(!snapshot.hasData) {
+          return Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        final title = Text(
+          "Submit Challenge Entry",
+          style: TextStyle(
+            fontSize: 20.0,
+            fontWeight: FontWeight.bold,
+          ),
+        );
+
+        final snap = snapshot.data;
+
+        return SingleChildScrollView(
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height / 1,
+            child: Form(
+              key: formKey,
+              child: Column(
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16.0, bottom: 12.0),
+                    child: title,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0, top: 16.0),
+                    child: _buildReposDropdown(snap),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: TextFormField(
+                      validator: (input) => input.isEmpty ? 'This field is required' : null,
+                      onSaved: (input) => _appNameController.text = input,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: "App Name",
+                        prefixIcon: Icon(OMIcons.shortText)
+                      ),
+                      controller: _appNameController,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: "Submission Description",
+                        prefixIcon: Icon(OMIcons.textsms)
+                      ),
+                      maxLines: 2,
+                      controller: _submissionDescriptionController,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
+                    child: Divider(
+                      color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
+                    child: ListTile(
+                      //leading: Icon(OMIcons.image),
+                      title: _selectedScreenshots.isNotEmpty
+                        ? Text("Selecting Images (${_selectedScreenshots.length} of ${_screenshots.length})")
+                        : Text("Upload Screenshots"),
+                      trailing: _selectedScreenshots.isNotEmpty
+                      ? IconButton(
+                        icon: Icon(Icons.delete, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
+                        onPressed: () => deleteSelectedImages(),
+                      )
+                      : IconButton(
+                        icon: Icon(OMIcons.addPhotoAlternate, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
+                        onPressed: _screenshots.length > 5 ? null : () => getImage(),
+                      ),
+                    ),
+                  ),
+                  Expanded(child: _buildImageGrid()),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return BottomAppBar(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context)
+          ),
+          IconButton(
+            icon: Icon(OMIcons.info),
+            onPressed: () {
+
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return CurrentUserBuilder(
       builder: (context, currentUser) {
-        final body = StreamBuilder<DocumentSnapshot>(
-          stream: Firestore.instance.collection("Users").document(currentUser.uid).snapshots(),
-          builder: (context, snapshot) {
-            if(!snapshot.hasData) {
-              return Center(
-                child: CircularProgressIndicator(),
-              );
-            }
-
-            final title = Text(
-              "Submit Challenge Entry",
-              style: TextStyle(
-                fontSize: 20.0,
-                fontWeight: FontWeight.bold,
-              ),
-            );
-
-            final snap = snapshot.data;
-
-            return SingleChildScrollView(
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height / 1,
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    children: <Widget>[
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16.0, bottom: 12.0),
-                        child: title,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0, top: 16.0),
-                        child: _buildReposDropdown(snap),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: TextFormField(
-                          validator: (input) => input.isEmpty ? 'This field is required' : null,
-                          onSaved: (input) => _appNameController.text = input,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                            labelText: "App Name",
-                            prefixIcon: Icon(OMIcons.shortText)
-                          ),
-                          controller: _appNameController,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: TextField(
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                            labelText: "Submission Description",
-                            prefixIcon: Icon(OMIcons.textsms)
-                          ),
-                          maxLines: 2,
-                          controller: _submissionDescriptionController,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
-                        child: Divider(
-                          color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
-                        child: ListTile(
-                          //leading: Icon(OMIcons.image),
-                          title: _selectedScreenshots.isNotEmpty
-                            ? Text("Selecting Images (${_selectedScreenshots.length} of ${_screenshots.length})")
-                            : Text("Upload Screenshots"),
-                          trailing: _selectedScreenshots.isNotEmpty
-                          ? IconButton(
-                            icon: Icon(Icons.delete, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
-                            onPressed: () => deleteSelectedImages(),
-                          )
-                          : IconButton(
-                            icon: Icon(OMIcons.addPhotoAlternate, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
-                            onPressed: _screenshots.length > 5 ? null : () => getImage(),
-                          ),
-                        ),
-                      ),
-                      Expanded(child: _buildImageGrid()),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
+        final fab = FloatingActionButton.extended(
+          icon: Icon(Icons.cloud_upload),
+          label: Text("Submit"),
+          onPressed: () => submitEntry(currentUser),
         );
+
+        final body = SafeArea(child: _buildBody(context, currentUser));
 
         return Scaffold(
           key: _scaffoldKey,
-          body: SafeArea(child: body),
+          body: body,
           floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-          floatingActionButton: FloatingActionButton.extended(
-            icon: Icon(Icons.cloud_upload),
-            label: Text("Submit"),
-            onPressed: () => submitEntry(currentUser),
-          ),
-          bottomNavigationBar: BottomAppBar(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: <Widget>[
-                IconButton(
-                  icon: Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context)
-                ),
-                IconButton(
-                  icon: Icon(OMIcons.info),
-                  onPressed: () {
-
-                  },
-                ),
-              ],
-            ),
-          ),
+          floatingActionButton: fab,
+          bottomNavigationBar: _buildBottomNavigationBar()
         );
       },
     );
