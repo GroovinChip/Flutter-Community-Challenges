@@ -58,11 +58,11 @@ class _CurrentChallengeCardState extends State<CurrentChallengeCard> {
               final currentChallenge = snapshot.data.documents[0];
               final String challengeName = currentChallenge['ChallengeName'] ?? "";
               
-              final DateTime submissionEndTime = currentChallenge['ChallengeEndTime'];
+              final DateTime submissionEndTime = currentChallenge['EndTime'];
               final timeLeft = submissionEndTime.difference(DateTime.now().toUtc());
               final String timeRemaining = "Time Remaining: ${formatDuration(timeLeft)}";
               
-              final int submissionCount = currentChallenge['ChallengeSubmissionsCount'] ?? 0;
+              final int submissionCount = currentChallenge['SubmissionsCount'] ?? 0;
               final String submissionsSoFar = "Submissions so far: $submissionCount";
               
               return Padding(
