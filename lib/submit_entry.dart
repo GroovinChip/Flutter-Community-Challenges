@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:rounded_modal/rounded_modal.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:photo_view/photo_view.dart';
 
 class RepositoriesState {
   final bool isLoading;
@@ -227,33 +227,6 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     });
   }
 
-  void _showImageRemoveModal(int screenshotIndex) {
-    showRoundedModalBottomSheet(
-      context: context,
-      dismissOnTap: false,
-      builder: (context) {
-        return Container(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ListTile(
-                leading: Icon(OMIcons.delete),
-                title: Text("Remove screenshot"),
-                onTap: () {
-                  setState(() {
-                    _screenshots.removeAt(screenshotIndex);
-                  });
-
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      }
-    );
-  }
-
   void onRepositorySelect(GithubRepository repository) {
     final usingRepositoryName = _githubRepo?.name == _appNameController.text;
 
@@ -327,6 +300,25 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     );
   }
 
+  void _onImageSelected(File image) {
+    if (_selectedScreenshots.isEmpty) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (ctx) {
+          return PhotoView(
+            imageProvider: FileImage(image)
+          );
+        },
+        fullscreenDialog: true,
+      ));
+    } else {
+      if (_selectedScreenshots.contains(image)) {
+        _selectedScreenshots.remove(image);
+      } else {
+        _selectedScreenshots.add(image);
+      }
+    }
+  }
+
   Widget _buildImageGrid() {
     return GridView.builder(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3),
@@ -352,15 +344,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
             },
             onTap: () {
               setState(() {
-                if (_selectedScreenshots.isEmpty) {
-                  _showImageRemoveModal(index);
-                } else {
-                  if (_selectedScreenshots.contains(image)) {
-                    _selectedScreenshots.remove(image);
-                  } else {
-                    _selectedScreenshots.add(image);
-                  }
-                }
+                _onImageSelected(image);
               });
             },
             child: Padding(
