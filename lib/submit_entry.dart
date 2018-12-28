@@ -256,40 +256,43 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
           );
         }).toList();
 
+        final dropdownHint = Row(
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.only(left: 4.0),
+              child: Icon(
+                  GroovinMaterialIcons.github_circle),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 10.0),
+              child: Text("Choose Repo"),
+            ),
+          ],
+        );
+
         return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Expanded(
-              child: Padding(
+              child:  Padding(
                 padding: const EdgeInsets.only(left: 16.0),
                 child: OutlineDropdownButtonFormField<GithubRepository>(
                   items: _githubRepos,
                   value: _githubRepo,
                   onChanged: (value) => onRepositorySelect(value),
-                  validator: (repo) {
-                    print(repo);
-                    return repo == null ? 'This field is required' : null;
-                  },
-                  hint: Row(
-                    children: <Widget>[
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4.0),
-                        child: Icon(
-                            GroovinMaterialIcons.github_circle),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 10.0),
-                        child: Text("Choose Repo"),
-                      ),
-                    ],
-                  ),
+                  validator: (repo) => repo == null ? 'This field is required' : null,
+                  hint: dropdownHint,
                 ),
               ),
               flex: 7,
             ),
             Expanded(
-              child: IconButton(
-                icon: Icon(Icons.refresh),
-                onPressed: () => refreshRepositories(userDocument),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: IconButton(
+                  icon: Icon(Icons.refresh),
+                  onPressed: () => refreshRepositories(userDocument),
+                ),
               ),
               flex: 1,
             ),
