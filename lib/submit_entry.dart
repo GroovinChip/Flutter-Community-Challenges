@@ -79,15 +79,14 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
   final storage = LocalStorage("Repositories");
   final _repositoriesSubject = BehaviorSubject<RepositoriesState>(seedValue: RepositoriesState.loading());
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  final formKey = GlobalKey<FormState>();
+  final TextEditingController _submissionDescriptionController = TextEditingController();
+  final TextEditingController _appNameController = TextEditingController();
 
   PermissionStatus status;
   GithubRepository _githubRepo;
-  TextEditingController _appNameController = TextEditingController();
-  TextEditingController _submissionDescriptionController = TextEditingController();
   List<File> _screenshots = [];
   List<File> _selectedScreenshots = [];
-
-  File _image;
 
   Future getImage() async {
     var image = await ImagePicker.pickImage(source: ImageSource.gallery);
@@ -96,8 +95,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     }
 
     setState(() {
-      _image = image;
-      _screenshots.add(_image);
+      _screenshots.add(image);
     });
   }
 
@@ -121,7 +119,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     _repositoriesSubject.add(RepositoriesState.success(storage.getItem("user_repositories")));
   }
 
-  Future refreshRepositories(DocumentSnapshot snap) async {
+  Future _refreshRepositories(DocumentSnapshot snap) async {
     _repositoriesSubject.add(RepositoriesState.loading());
     final response = await http.get(snap['ReposUrl']);
     final repoJson = json.decode(response.body) as List;
@@ -129,9 +127,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     _repositoriesSubject.add(RepositoriesState.success(repoJson));
   }
 
-  final formKey = GlobalKey<FormState>();
-
-  void submitEntry(FirebaseUser currentUser) async {
+  _submitEntry(FirebaseUser currentUser) async {
     if(!formKey.currentState.validate()) {
       return;
     }
@@ -219,14 +215,14 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     );
   }
 
-  deleteSelectedImages() {
+  _deleteSelectedImages() {
     setState(() {
       _selectedScreenshots.forEach((s) => _screenshots.remove(s));
       _selectedScreenshots = [];
     });
   }
 
-  void onRepositorySelect(GithubRepository repository) {
+  _onRepositorySelect(GithubRepository repository) {
     final usingRepositoryName = _githubRepo?.name == _appNameController.text;
 
     setState(() {
@@ -279,9 +275,15 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
                 child: OutlineDropdownButtonFormField<GithubRepository>(
                   items: _githubRepos,
                   value: _githubRepo,
-                  onChanged: (value) => onRepositorySelect(value),
+                  onChanged: (value) => _onRepositorySelect(value),
                   validator: (repo) => repo == null ? 'This field is required' : null,
                   hint: dropdownHint,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.all(8.0),
+                    labelText: "Repository",
+                    prefixIcon: Icon(Icons.code),
+                  ),
                 ),
               ),
               flex: 7,
@@ -291,7 +293,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
                 padding: const EdgeInsets.only(top: 8),
                 child: IconButton(
                   icon: Icon(Icons.refresh),
-                  onPressed: () => refreshRepositories(userDocument),
+                  onPressed: () => _refreshRepositories(userDocument),
                 ),
               ),
               flex: 1,
@@ -302,6 +304,28 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     );
   }
 
+  Future<bool> _showDeleteImageConfirmation() {
+    return showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Remove Screenshot?"),
+          content: const Text("Are you sure you want to remove the screenshot?"),
+          actions: <Widget>[
+            new FlatButton(
+              child: const Text("No"),
+              onPressed: () => Navigator.of(context).pop(false)
+            ),
+            new FlatButton(
+              child: const Text("Yes"),
+              onPressed: () => Navigator.of(context).pop(true)
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showImageGallery(File selectedImage) {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (ctx) {
@@ -309,6 +333,24 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
           imageProvider: FileImage(f),
           heroTag: f.path
         )).toList();
+
+        final backButton = IconButton(
+          icon: const Icon(Icons.arrow_back),
+          color: Colors.white,
+          onPressed: () => Navigator.of(context).pop(),
+        );
+
+        final deleteButton = IconButton(
+          icon: const Icon(Icons.delete),
+          color: Colors.white,
+          onPressed: () async {
+            if (await _showDeleteImageConfirmation()) {
+              _screenshots.remove(selectedImage);
+              _selectedScreenshots.remove(selectedImage);
+              Navigator.of(context).pop();
+            }
+          },
+        );
 
         return Scaffold(
           body: Container(
@@ -328,42 +370,8 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        color: Colors.white,
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        color: Colors.white,
-                        onPressed: () async {
-                          final res = await showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: const Text("Remove Screenshot?"),
-                                content: const Text("Are you sure you want to remove the screenshot?"),
-                                actions: <Widget>[
-                                  new FlatButton(
-                                    child: const Text("No"),
-                                    onPressed: () => Navigator.of(context).pop(false)
-                                  ),
-                                  new FlatButton(
-                                    child: const Text("Yes"),
-                                    onPressed: () => Navigator.of(context).pop(true)
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-
-                          if (res) {
-                            _screenshots.remove(selectedImage);
-                            _selectedScreenshots.remove(selectedImage);
-                            Navigator.of(context).pop();
-                          }
-                        },
-                      )
+                      backButton,
+                      deleteButton,
                     ],
                   )
                 )
@@ -435,7 +443,9 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
           );
         }
 
-        final title = Text(
+        final snap = snapshot.data;
+
+        final titleWidget = Text(
           "Submit Challenge Entry",
           style: TextStyle(
             fontSize: 20.0,
@@ -443,72 +453,86 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
           ),
         );
 
-        final snap = snapshot.data;
+        final repoWidget = _buildReposDropdown(snap);
+
+        final appNameWidget = TextFormField(
+          validator: (input) => input.isEmpty ? 'This field is required' : null,
+          onSaved: (input) => _appNameController.text = input,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(),
+            labelText: "App Name",
+            prefixIcon: Icon(OMIcons.shortText)
+          ),
+          controller: _appNameController,
+        );
+
+        final descriptionWidget = TextField(
+          decoration: InputDecoration(
+            border: OutlineInputBorder(),
+            labelText: "Submission Description",
+            prefixIcon: Icon(OMIcons.textsms)
+          ),
+          maxLines: 2,
+          controller: _submissionDescriptionController,
+        );
+
+        final dividerWidget = Divider(
+          color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+        );
+
+        final imageHeaderWidget = ListTile(
+          title: _selectedScreenshots.isNotEmpty
+            ? Text("Selecting Screenshots (${_selectedScreenshots.length} of ${_screenshots.length})")
+            : Text("Upload Screenshots"),
+          trailing: _selectedScreenshots.isNotEmpty
+          ? IconButton(
+            icon: Icon(Icons.delete, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
+            onPressed: () => _deleteSelectedImages(),
+          )
+          : IconButton(
+            icon: Icon(OMIcons.addPhotoAlternate, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
+            onPressed: _screenshots.length > 5 ? null : () => getImage(),
+          ),
+        );
 
         return SingleChildScrollView(
           child: SizedBox(
-            height: MediaQuery.of(context).size.height / 1,
+            height: MediaQuery.of(context).size.height,
             child: Form(
               key: formKey,
               child: Column(
                 children: <Widget>[
+                  const SizedBox(height: 16),
+
+                  titleWidget,
+
+                  const SizedBox(height: 28),
+
+                  repoWidget,
+
                   Padding(
-                    padding: const EdgeInsets.only(top: 16.0, bottom: 12.0),
-                    child: title,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16.0, top: 16.0),
-                    child: _buildReposDropdown(snap),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: TextFormField(
-                      validator: (input) => input.isEmpty ? 'This field is required' : null,
-                      onSaved: (input) => _appNameController.text = input,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: "App Name",
-                        prefixIcon: Icon(OMIcons.shortText)
-                      ),
-                      controller: _appNameController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: <Widget>[
+                        const SizedBox(height: 32),
+
+                        appNameWidget,
+
+                        const SizedBox(height: 32),
+
+                        descriptionWidget,
+
+                        const SizedBox(height: 24),
+
+                        dividerWidget,
+
+                        const SizedBox(height: 8),
+
+                        imageHeaderWidget,
+                      ],
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: "Submission Description",
-                        prefixIcon: Icon(OMIcons.textsms)
-                      ),
-                      maxLines: 2,
-                      controller: _submissionDescriptionController,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
-                    child: Divider(
-                      color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
-                    child: ListTile(
-                      //leading: Icon(OMIcons.image),
-                      title: _selectedScreenshots.isNotEmpty
-                        ? Text("Selecting Images (${_selectedScreenshots.length} of ${_screenshots.length})")
-                        : Text("Upload Screenshots"),
-                      trailing: _selectedScreenshots.isNotEmpty
-                      ? IconButton(
-                        icon: Icon(Icons.delete, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
-                        onPressed: () => deleteSelectedImages(),
-                      )
-                      : IconButton(
-                        icon: Icon(OMIcons.addPhotoAlternate, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
-                        onPressed: _screenshots.length > 5 ? null : () => getImage(),
-                      ),
-                    ),
-                  ),
+
                   Expanded(child: _buildImageGrid()),
                 ],
               ),
@@ -546,12 +570,15 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
         final fab = FloatingActionButton.extended(
           icon: Icon(Icons.cloud_upload),
           label: Text("Submit"),
-          onPressed: () => submitEntry(currentUser),
+          onPressed: () => _submitEntry(currentUser),
         );
 
-        final body = SafeArea(child: _buildBody(context, currentUser));
+        final body = SafeArea(
+          child: _buildBody(context, currentUser),
+        );
 
         return Scaffold(
+          resizeToAvoidBottomPadding: false,
           key: _scaffoldKey,
           body: body,
           floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
