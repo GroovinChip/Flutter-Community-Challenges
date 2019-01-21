@@ -75,62 +75,6 @@ class _UpcomingChallengeCardState extends State<UpcomingChallengeCard> {
                       ),
                     ),
                   ),
-                  /*Padding(
-                    padding: const EdgeInsets.only(right: 0.0),
-                    child: StreamBuilder<DocumentSnapshot>(
-                      stream: Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).collection("Voters").document(currentUser.displayName).snapshots(),
-                      builder: (context, snapshot) {
-                        if(!snapshot.hasData){
-                          return CircularProgressIndicator();
-                        } else {
-                          final voteType = snapshot.data.exists ? snapshot.data['VoteType'] : "";
-
-                          upvoteColor = Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white;
-                          downvoteColor = Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white;
-                          if(voteType == "Upvote") {
-                            upvoteColor = Colors.orange;
-                            downvoteColor = Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white;
-                          } else if(voteType == "Downvote"){
-                            downvoteColor = Colors.indigo;
-                            upvoteColor = Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white;
-                          }
-                          return Column(
-                            children: <Widget>[
-                              IconButton(
-                                icon: Icon(Icons.arrow_upward, color: upvoteColor),
-                                onPressed: (){
-                                  if(voteType != "Upvote") {
-                                    voteCount += 1;
-                                    Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).updateData({
-                                      "VoteCount":voteCount,
-                                    });
-                                    Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).collection("Voters").document(currentUser.displayName).setData({
-                                      "VoteType":"Upvote",
-                                    });
-                                  }
-                                },
-                              ),
-                              Text(voteCount.toString()),
-                              IconButton(
-                                icon: Icon(Icons.arrow_downward, color: downvoteColor),
-                                onPressed: (){
-                                  if(voteType != "Downvote") {
-                                    voteCount-= 1;
-                                    Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).updateData({
-                                      "VoteCount":voteCount,
-                                    });
-                                    Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).collection("Voters").document(currentUser.displayName).setData({
-                                      "VoteType":"Downvote",
-                                    });
-                                  }
-                                },
-                              ),
-                            ],
-                          );
-                        }
-                      },
-                    ),
-                  ),*/
                 ],
               ),
             ],
