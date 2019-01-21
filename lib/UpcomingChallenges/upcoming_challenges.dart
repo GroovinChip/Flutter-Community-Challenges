@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_community_challenges/upcoming_challenge_card.dart';
+import 'package:flutter_community_challenges/UpcomingChallenges/upcoming_challenge_card.dart';
 import 'package:groovin_material_icons/groovin_material_icons.dart';
 import 'package:outline_material_icons/outline_material_icons.dart';
 
