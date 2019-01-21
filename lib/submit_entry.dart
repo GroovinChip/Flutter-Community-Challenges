@@ -75,6 +75,38 @@ class CurrentUserBuilder extends StatelessWidget {
   }
 }
 
+class ImageTile extends StatelessWidget {
+  final File image;
+  final VoidCallback onLongPress;
+  final VoidCallback onTap;
+  final Image child;
+
+  ImageTile({
+    Key key,
+    @required this.image,
+    @required this.child,
+    this.onLongPress,
+    this.onTap
+  }): super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GridTile(
+      child: GestureDetector(
+        onLongPress: () => this.onLongPress(),
+        onTap: () => this.onTap(),
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Hero(
+            child: child,
+            tag: image.path,
+          ),
+        )
+      ),
+    );
+  }
+}
+
 class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
   final storage = LocalStorage("Repositories");
   final _repositoriesSubject = BehaviorSubject<RepositoriesState>(seedValue: RepositoriesState.loading());
@@ -97,14 +129,6 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
     setState(() {
       _screenshots.add(image);
     });
-  }
-
-  // Check current permissions. If storage permission not granted, prompt for it.
-  void checkPermissions() async {
-    Map<PermissionGroup, PermissionStatus> permissions =
-      await PermissionHandler.requestPermissions([PermissionGroup.storage]);
-    PermissionStatus storagePermission =
-      await PermissionHandler.checkPermissionStatus(PermissionGroup.storage);
   }
 
   @override
@@ -134,6 +158,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
 
     final docs = await Firestore.instance.collection("CurrentChallenge").getDocuments();
     if (docs.documents.isEmpty) {
+      // Should be an edge case, or never happen, but maybe add an error?
       return;
     }
 
@@ -170,32 +195,32 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
   }
 
   Widget _buildLoadingDropdown() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: OutlineDropdownButton(
-        items: [
-          DropdownMenuItem(
-            value: "",
-            child: Row(
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.only(left: 4.0),
-                  child: Icon(GroovinMaterialIcons.github_circle),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 10.0),
-                  child: Text("Loading repositories..."),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 10.0),
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.0,
-                  ),
-                ),
-              ],
+    final loadingItem = DropdownMenuItem(
+      value: "",
+      child: Row(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.only(left: 4.0),
+            child: Icon(GroovinMaterialIcons.github_circle),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 10.0),
+            child: Text("Loading repositories..."),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 10.0),
+            child: CircularProgressIndicator(
+              strokeWidth: 2.0,
             ),
           ),
         ],
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: OutlineDropdownButton(
+        items: [loadingItem],
         value: "",
         onChanged: (value) {},
         hint: Row(
@@ -223,12 +248,13 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
   }
 
   _onRepositorySelect(GithubRepository repository) {
-    final usingRepositoryName = _githubRepo?.name == _appNameController.text;
+    final isUsingRepositoryName = _githubRepo?.name == _appNameController.text;
 
     setState(() {
       _githubRepo = repository;
 
-      if (usingRepositoryName || _appNameController.text.isEmpty) {
+      // Only set name if using pre-loaded or no name
+      if (isUsingRepositoryName || _appNameController.text.isEmpty) {
         _appNameController.text = repository.name;
       }
     });
@@ -408,26 +434,19 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
         ? Image.file(_screenshots[index], color: Colors.black45, colorBlendMode: BlendMode.darken, fit: BoxFit.cover)
         : Image.file(_screenshots[index], fit: BoxFit.cover);
 
-        return GridTile(
-          child: GestureDetector(
-            onLongPress: () {
-              setState(() { 
-                  if (_selectedScreenshots.contains(image)) {
-                    _selectedScreenshots.remove(image);
-                  } else {
-                    _selectedScreenshots.add(image);
-                  }
-              });
-            },
-            onTap: () => setState(() { _onImageSelected(image); }),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Hero(
-                child: child,
-                tag: image.path,
-              ),
-            )
-          ),
+        return ImageTile(
+          child: child,
+          image: image,
+          onTap: () => setState(() { _onImageSelected(image); }),
+          onLongPress: () {
+            setState(() { 
+                if (_selectedScreenshots.contains(image)) {
+                  _selectedScreenshots.remove(image);
+                } else {
+                  _selectedScreenshots.add(image);
+                }
+            });
+          },
         );
       },
     );
