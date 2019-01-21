@@ -5,7 +5,7 @@ import 'package:outline_material_icons/outline_material_icons.dart';
 
 /// This widget represents a ChallengeSuggestion that a user has
 /// submitted to be voted on
-class ChallengeSuggestionCard extends StatelessWidget {
+class ChallengeSuggestionCard extends StatefulWidget {
   const ChallengeSuggestionCard({
     Key key,
     @required this.currentUser,
@@ -18,12 +18,19 @@ class ChallengeSuggestionCard extends StatelessWidget {
   final AsyncSnapshot snapshot;
 
   @override
+  ChallengeSuggestionCardState createState() {
+    return new ChallengeSuggestionCardState();
+  }
+}
+
+class ChallengeSuggestionCardState extends State<ChallengeSuggestionCard> {
+  @override
   Widget build(BuildContext context) {
     int voteCount;
     Color upvoteColor = Colors.black;
     Color downvoteColor = Colors.black;
     IconData challengeTypeIcon;
-    DocumentSnapshot csSnap = this.snapshot.data.documents[index];
+    DocumentSnapshot csSnap = this.widget.snapshot.data.documents[widget.index];
     // Make sure that the VoteCount is never null or blank
     if("${csSnap['VoteCount']}" == null || "${csSnap['VoteCount']}" == ""){
       voteCount = 0;
@@ -118,7 +125,7 @@ class ChallengeSuggestionCard extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(right: 0.0),
                     child: StreamBuilder<DocumentSnapshot>(
-                      stream: Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).collection("Voters").document(currentUser.displayName).snapshots(),
+                      stream: Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).collection("Voters").document(widget.currentUser.displayName).snapshots(),
                       builder: (context, snapshot) {
                         if(!snapshot.hasData){
                           return CircularProgressIndicator();
@@ -144,7 +151,7 @@ class ChallengeSuggestionCard extends StatelessWidget {
                                     Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).updateData({
                                       "VoteCount":voteCount,
                                     });
-                                    Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).collection("Voters").document(currentUser.displayName).setData({
+                                    Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).collection("Voters").document(widget.currentUser.displayName).setData({
                                       "VoteType":"Upvote",
                                     });
                                   }
@@ -159,7 +166,7 @@ class ChallengeSuggestionCard extends StatelessWidget {
                                     Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).updateData({
                                       "VoteCount":voteCount,
                                     });
-                                    Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).collection("Voters").document(currentUser.displayName).setData({
+                                    Firestore.instance.collection("ChallengeSuggestions").document(csSnap.documentID).collection("Voters").document(widget.currentUser.displayName).setData({
                                       "VoteType":"Downvote",
                                     });
                                   }
