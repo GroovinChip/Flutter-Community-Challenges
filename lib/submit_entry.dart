@@ -12,6 +12,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+import 'package:flutter_community_challenges/widgets/widgets.dart';
 
 class RepositoriesState {
   final bool isLoading;
@@ -36,8 +37,6 @@ class SubmitEntryToChallenge extends StatefulWidget {
   _SubmitEntryToChallengeState createState() => _SubmitEntryToChallengeState();
 }
 
-typedef CurrentUserBuilderFunction = Function(BuildContext, FirebaseUser);
-
 class GithubRepository {
   final String name;
   final String url;
@@ -55,58 +54,6 @@ class GithubRepository {
     && o.url == url;
 }
 
-class CurrentUserBuilder extends StatelessWidget {
-  final CurrentUserBuilderFunction builder;
-
-  const CurrentUserBuilder({Key key, @required this.builder}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<FirebaseUser>(
-      future: FirebaseAuth.instance.currentUser(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return CircularProgressIndicator();
-        }
-
-        return builder(context, snapshot.data);
-      }
-    );
-  }
-}
-
-class ImageTile extends StatelessWidget {
-  final File image;
-  final VoidCallback onLongPress;
-  final VoidCallback onTap;
-  final Image child;
-
-  ImageTile({
-    Key key,
-    @required this.image,
-    @required this.child,
-    this.onLongPress,
-    this.onTap
-  }): super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return GridTile(
-      child: GestureDetector(
-        onLongPress: () => this.onLongPress(),
-        onTap: () => this.onTap(),
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Hero(
-            child: child,
-            tag: image.path,
-          ),
-        )
-      ),
-    );
-  }
-}
-
 class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
   final storage = LocalStorage("Repositories");
   final _repositoriesSubject = BehaviorSubject<RepositoriesState>(seedValue: RepositoriesState.loading());
@@ -122,7 +69,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
 
   Future getImage() async {
     var image = await ImagePicker.pickImage(source: ImageSource.gallery);
-    if (image == null) {
+    if (image == null || _screenshots.any((f) => f.path == image.path)) {
       return;
     }
 
