@@ -13,6 +13,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:flutter_community_challenges/widgets/widgets.dart';
+import 'package:flutter_community_challenges/widgets/extended_notch.dart';
 
 class RepositoriesState {
   final bool isLoading;
@@ -511,6 +512,7 @@ class _SubmitEntryToChallengeState extends State<SubmitEntryToChallenge> {
 
   Widget _buildBottomNavigationBar() {
     return BottomAppBar(
+      shape: ExtendedNotch(),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
