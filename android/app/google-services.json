@@ -1,0 +1,71 @@
+{
+  "project_info": {
+    "project_number": "843349667728",
+    "firebase_url": "https://flutter-community-challenges.firebaseio.com",
+    "project_id": "flutter-community-challenges",
+    "storage_bucket": "flutter-community-challenges.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:843349667728:android:c9b1694734df45bd",
+        "android_client_info": {
+          "package_name": "com.groovinchip.fluttercommunitychallenges"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "843349667728-dclfq1q1r53aurdqde1erjno93d1po2p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.groovinchip.fluttercommunitychallenges",
+            "certificate_hash": "c6f38394ac2e6b07568c809172449215e731588c"
+          }
+        },
+        {
+          "client_id": "843349667728-n8rsl8b4dtpsu4t5v3h3b3r1hihceevb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.groovinchip.fluttercommunitychallenges",
+            "certificate_hash": "3583c159206c49e1c0499a37c83a15ec3df645a1"
+          }
+        },
+        {
+          "client_id": "843349667728-rh4f7bucsq024revdmibb6ofm3etoe9v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.groovinchip.fluttercommunitychallenges",
+            "certificate_hash": "902c3abbcc1f45630ea31837eb0492c17f730b4c"
+          }
+        },
+        {
+          "client_id": "843349667728-adghf99t60ko3v3riig5fv8v0ogqs72k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVfrc9ZeFRdAptWozaG0b6qulHjwGwBb0"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "843349667728-adghf99t60ko3v3riig5fv8v0ogqs72k.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

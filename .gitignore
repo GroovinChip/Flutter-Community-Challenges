@@ -3,7 +3,6 @@
 .idea/
 .packages
 .pub/
-android/app/google-services.json
 properties/
 build/
 

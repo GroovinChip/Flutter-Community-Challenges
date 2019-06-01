@@ -9,9 +9,9 @@ import 'package:groovin_widgets/groovin_widgets.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:photo_view/photo_view_gallery.dart';
 import 'package:flutter_community_challenges/widgets/widgets.dart';
 import 'package:flutter_community_challenges/widgets/extended_notch.dart';
 
